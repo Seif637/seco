@@ -1,0 +1,3000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PQI Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/c92986acdf.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Epilogue', sans-serif;
+        }
+
+        .clearfix::after {
+            content: ' ';
+            display: block;
+            clear: both;
+        }
+
+        li {
+            list-style: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 40px auto;
+            gap: 32px;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(44, 62, 80, 0.13);
+            background: rgba(255,255,255,0.65);
+            padding: 30px 20px;
+            backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255,255,255,0.25);
+        }
+
+        .main, .todo {
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(44, 62, 80, 0.13);
+            background: rgba(255,255,255,0.85);
+            transition: box-shadow 0.2s;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+
+        .main {
+            width: 850px;
+            padding: 32px 28px;
+        }
+
+        .todo {
+            width: 480px;
+            padding: 32px 28px;
+            position: relative;
+        }
+
+        .main-title, .todo-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 18px;
+            color: #1976d2;
+            text-shadow: 0 4px 24px #b3c6e7, 0 2px 8px #e3f2fd;
+        }
+
+        .month-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .month-name {
+            color: #34495e;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #1976d2 60%, #64b5f6 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            box-shadow: 0 2px 6px #b3c6e7;
+        }
+
+        .nav-btn:hover {
+            background: linear-gradient(135deg, #1565c0 60%, #42a5f5 100%);
+            transform: scale(1.08);
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 600;
+            color: #90a4ae;
+            font-size: 16px;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .day {
+            background: #f4f8fb;
+            padding: 14px 0 10px 0;
+            min-height: 90px;
+            border-radius: 8px;
+            font-size: 16px;
+            box-shadow: 0 1px 3px #e3eafc;
+            border: 1px solid #e3eafc;
+            transition: background 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .day:hover {
+            background: #e3f2fd;
+            box-shadow: 0 2px 8px #b3c6e7;
+            cursor: pointer;
+        }
+
+        .day-number {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .other-month {
+            color: #b0bec5;
+            background: #f0f4f8;
+        }
+
+        .today {
+            background: #fffde7;
+            border: 2px solid #ffe082;
+        }
+
+        .today .day-number {
+            color: #fbc02d;
+            font-weight: 600;
+        }
+
+        .has-todo::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: #e74c3c;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .todo-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            align-items: flex-start;
+        }
+
+        .todo-input, #priority-select, #category-input, #reminder-input, #recurrence-select, .custom-file-input-wrapper {
+            flex: 1 1 180px;
+            min-width: 120px;
+            max-width: 220px;
+            margin-bottom: 0;
+        }
+
+        .todo-btn, .add-subtask-btn, .lang-btn, .notif-btn {
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            box-shadow: 0 4px 16px #b3c6e7, 0 2px 8px #e3eafc;
+            border: none;
+            padding: 12px 24px;
+            margin-bottom: 0;
+            cursor: pointer;
+            transition: 
+                background 0.18s cubic-bezier(.4,0,.2,1),
+                box-shadow 0.18s cubic-bezier(.4,0,.2,1),
+                transform 0.18s cubic-bezier(.4,0,.2,1),
+                color 0.18s cubic-bezier(.4,0,.2,1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .todo-btn:hover, .add-subtask-btn:hover, .lang-btn:hover, .notif-btn:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+            box-shadow: 0 8px 32px #b3c6e7;
+            transform: translateY(-2px) scale(1.05);
+            color: #fff;
+        }
+
+        .todo-btn:active, .add-subtask-btn:active, .lang-btn:active, .notif-btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 2px 8px #b3c6e7;
+        }
+
+        .todo-btn.add {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .todo-btn.add:hover {
+            background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%);
+        }
+
+        .todo-btn.reset {
+            background: linear-gradient(135deg, #b0bec5 0%, #636e72 100%);
+        }
+
+        .todo-btn.reset:hover {
+            background: linear-gradient(135deg, #636e72 0%, #b0bec5 100%);
+        }
+
+        .todo-btn.allreset {
+            background: linear-gradient(135deg, #e74c3c 0%, #f1c40f 100%);
+        }
+
+        .todo-btn.allreset:hover {
+            background: linear-gradient(135deg, #f1c40f 0%, #e74c3c 100%);
+        }
+
+        .todo-btn.print {
+            background: linear-gradient(135deg, #1976d2 0%, #60a5fa 100%);
+        }
+
+        .todo-btn#print-btn, .todo-btn#print-btn:hover {
+            background: linear-gradient(135deg, #1976d2 0%, #60a5fa 100%);
+        }
+
+        .todo-btn#export-btn {
+            background: linear-gradient(135deg, #8e44ad 0%, #6c3483 100%);
+        }
+
+        .todo-btn#export-btn:hover {
+            background: linear-gradient(135deg, #6c3483 0%, #8e44ad 100%);
+        }
+
+        .todo-btn#import-btn {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+        }
+
+        .todo-btn#import-btn:hover {
+            background: linear-gradient(135deg, #00cec9 0%, #00b894 100%);
+        }
+
+        .notif-btn {
+            background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+            color: #fff;
+            font-size: 1.3em;
+            padding: 10px 16px;
+            margin-left: 8px;
+        }
+
+        .notif-btn.active {
+            animation: notif-bounce 0.5s;
+        }
+
+        @keyframes notif-bounce {
+            0% {
+                transform: scale(1);
+            }
+
+            30% {
+                transform: scale(1.25);
+            }
+
+            60% {
+                transform: scale(0.95);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .lang-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+            color: #fff;
+            font-size: 1.1em;
+            padding: 10px 16px;
+            margin-left: 8px;
+        }
+
+        .lang-dropdown {
+            position: absolute;
+            top: 48px;
+            right: 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px #b3c6e7;
+            z-index: 100;
+            min-width: 140px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: fadeInLang 0.25s;
+        }
+
+        @keyframes fadeInLang {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .lang-dropdown.active {
+            display: flex;
+        }
+
+        .lang-dropdown button {
+            background: none;
+            border: none;
+            color: #23272f;
+            padding: 12px 20px;
+            font-size: 1em;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .lang-dropdown button:hover, .lang-dropdown button.selected {
+            background: #e3f2fd;
+            color: #6366f1;
+        }
+
+        @media (max-width: 900px) {
+            .todo-input-container {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .todo-input, #priority-select, #category-input, #reminder-input, #recurrence-select, .custom-file-input-wrapper {
+                width: 100%;
+                max-width: 100vw;
+            }
+        }
+
+        .todo-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .todo-input, #priority-select, #category-input, #reminder-input, #recurrence-select, #attachment-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            font-size: 15px;
+            background: #f8fafc;
+            transition: border 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .todo-input:focus, #priority-select:focus, #category-input:focus, #reminder-input:focus, #recurrence-select:focus, #attachment-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .todo-btn, .add-subtask-btn {
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0 1px 3px #e3eafc;
+            border: none;
+            padding: 10px 16px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .todo-btn.add {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: #fff;
+        }
+
+        .todo-btn.add:hover {
+            background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%);
+        }
+
+        .todo-btn.reset {
+            background: #b0bec5;
+            color: #fff;
+        }
+
+        .todo-btn.reset:hover {
+            background: #7f8c8d;
+        }
+
+        .todo-btn.allreset {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .todo-btn.allreset:hover {
+            background: #c0392b;
+        }
+
+        .todo-btn.print {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .todo-btn.print:hover {
+            background: #1565c0;
+        }
+
+        .todo-btn#print-btn, .todo-btn#print-btn:hover {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .todo-btn#export-btn {
+            background: #8e44ad;
+            color: #fff;
+        }
+
+        .todo-btn#export-btn:hover {
+            background: #6c3483;
+        }
+
+        .todo-btn#import-btn {
+            background: #00b894;
+            color: #fff;
+        }
+
+        .todo-btn#import-btn:hover {
+            background: #00897b;
+        }
+
+        .todo-list {
+            margin-top: 18px;
+        }
+
+        .todo-item {
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: box-shadow 0.2s, background 0.2s;
+            flex-direction: column;
+            box-shadow: 0 1px 4px #e3eafc;
+        }
+
+        .todo-item:hover {
+            background: #e3f2fd;
+            box-shadow: 0 2px 12px #b3c6e7;
+        }
+
+        .todo-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        .todo-text {
+            flex: 1;
+            margin-right: 10px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+            margin-left: 4px;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+
+        .selected-date {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .subtask-container {
+            width: 100%;
+            margin-top: 12px;
+            padding-left: 18px;
+            border-left: 3px solid #1976d2;
+            background: #f7fafd;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .subtask-list {
+            margin-top: 5px;
+        }
+
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #e3eafc;
+        }
+
+        .subtask-input-container {
+            display: flex;
+            margin-top: 5px;
+            gap: 6px;
+        }
+
+        .subtask-input {
+            flex: 1;
+            padding: 7px 10px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #f8fafc;
+        }
+
+        .add-subtask-btn {
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: 13px;
+        }
+
+        .add-subtask-btn:hover {
+            background: #1565c0;
+        }
+
+        .subtask-text {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .subtask-delete-btn {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .subtask-delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .subtask-toggle {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #95a5a6;
+        }
+
+        .subtask-count {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                max-width: 800px;
+            }
+
+            .main, .todo {
+                width: 100%;
+            }
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            .todo, .todo * {
+                visibility: visible;
+            }
+
+            .todo {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+            }
+
+            .todo-input-container, .print-btn {
+                display: none !important;
+            }
+        }
+
+        .priority-high {
+            border-left: 5px solid #e74c3c;
+            background: #fdecea;
+        }
+
+        .priority-medium {
+            border-left: 5px solid #f1c40f;
+            background: #fffbe6;
+        }
+
+        .priority-low {
+            border-left: 5px solid #2ecc71;
+            background: #eafaf1;
+        }
+
+        .priority-label {
+            font-size: 13px;
+            margin-left: 8px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 8px;
+        }
+
+        .priority-high .priority-label {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .priority-medium .priority-label {
+            background: #f1c40f;
+            color: #fff;
+        }
+
+        .priority-low .priority-label {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        .task-completed .todo-text {
+            text-decoration: line-through;
+            color: #95a5a6;
+        }
+
+        .category-tag {
+            background: #dfe6e9;
+            color: #636e72;
+            border-radius: 6px;
+            font-size: 12px;
+            padding: 2px 8px;
+            margin-left: 8px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            background: #ecf0f1;
+            height: 7px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .progress-bar {
+            height: 7px;
+            border-radius: 4px;
+            background: #1976d2;
+        }
+
+        /* Modern file input styles */
+        .custom-file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 180px;
+            margin-bottom: 4px;
+        }
+
+        .custom-file-input {
+            opacity: 0;
+            width: 100%;
+            height: 42px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .custom-file-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px #e3eafc;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            border: none;
+            width: 100%;
+            min-width: 120px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .custom-file-label:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+            box-shadow: 0 4px 16px #b3c6e7;
+        }
+
+        .custom-file-label .fa-paperclip {
+            font-size: 1.2em;
+        }
+
+        .custom-file-label .file-name {
+            font-size: 0.98em;
+            color: #e0eafc;
+            margin-left: 8px;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Responsive for file input */
+        @media (max-width: 700px) {
+            .custom-file-input-wrapper {
+                max-width: 98vw;
+            }
+
+            .custom-file-label {
+                min-width: 0;
+            }
+        }
+
+        /* Theme Switcher Button */
+        .theme-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            padding: 12px 22px;
+            margin-left: 8px;
+            margin-bottom: 0;
+            box-shadow: 0 4px 16px #b3c6e7, 0 2px 8px #e3eafc;
+            cursor: pointer;
+            transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .theme-btn:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+            box-shadow: 0 8px 32px #b3c6e7;
+            transform: translateY(-2px) scale(1.05);
+        }
+        .theme-dropdown {
+            position: absolute;
+            top: 48px;
+            left: 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px #b3c6e7;
+            z-index: 101;
+            min-width: 180px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: fadeInLang 0.25s;
+        }
+        .theme-dropdown.active {
+            display: flex;
+        }
+        .theme-dropdown button {
+            background: none;
+            border: none;
+            color: #23272f;
+            padding: 12px 20px;
+            font-size: 1em;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .theme-dropdown button:hover, .theme-dropdown button.selected {
+            background: #e3f2fd;
+            color: #6366f1;
+        }
+
+        /* Neon Theme */
+        body.theme-neon {
+            background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%);
+            color: #fff;
+        }
+        body.theme-neon .container,
+        body.theme-neon .main,
+        body.theme-neon .todo {
+            background: rgba(20, 20, 40, 0.95);
+            color: #fff;
+            box-shadow: 0 8px 32px #00fff7a0;
+        }
+        body.theme-neon .todo-btn, body.theme-neon .add-subtask-btn, body.theme-neon .lang-btn, body.theme-neon .notif-btn, body.theme-neon .theme-btn {
+            background: linear-gradient(90deg, #00fff7 0%, #ff00cc 100%);
+            color: #fff;
+            box-shadow: 0 0 16px #00fff7, 0 2px 8px #ff00cc;
+            border: none;
+        }
+        body.theme-neon .todo-btn:hover, body.theme-neon .add-subtask-btn:hover, body.theme-neon .lang-btn:hover, body.theme-neon .notif-btn:hover, body.theme-neon .theme-btn:hover {
+            background: linear-gradient(90deg, #ff00cc 0%, #00fff7 100%);
+            color: #fff;
+            box-shadow: 0 0 32px #ff00cc, 0 2px 8px #00fff7;
+        }
+        body.theme-neon .day {
+            background: #18182f;
+            color: #00fff7;
+            border-color: #ff00cc;
+            box-shadow: 0 0 8px #00fff7;
+        }
+        body.theme-neon .day.selected {
+            border: 2px solid #ff00cc;
+            box-shadow: 0 0 0 3px #ff00cc, 0 2px 8px #00fff7;
+        }
+        body.theme-neon .main-title, body.theme-neon .todo-title {
+            color: #00fff7;
+            text-shadow: 0 2px 12px #ff00cc;
+        }
+
+        /* Sunrise Theme */
+        body.theme-sunrise {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #23272f;
+        }
+        body.theme-sunrise .container,
+        body.theme-sunrise .main,
+        body.theme-sunrise .todo {
+            background: rgba(255, 245, 235, 0.97);
+            color: #23272f;
+            box-shadow: 0 8px 32px #fcb69f80;
+        }
+        body.theme-sunrise .todo-btn, body.theme-sunrise .add-subtask-btn, body.theme-sunrise .lang-btn, body.theme-sunrise .notif-btn, body.theme-sunrise .theme-btn {
+            background: linear-gradient(135deg, #fcb69f 0%, #ffecd2 100%);
+            color: #23272f;
+            box-shadow: 0 2px 8px #fcb69f;
+        }
+        body.theme-sunrise .todo-btn:hover, body.theme-sunrise .add-subtask-btn:hover, body.theme-sunrise .lang-btn:hover, body.theme-sunrise .notif-btn:hover, body.theme-sunrise .theme-btn:hover {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #23272f;
+            box-shadow: 0 8px 32px #fcb69f;
+        }
+        body.theme-sunrise .main-title, body.theme-sunrise .todo-title {
+            color: #fcb69f;
+            text-shadow: 0 2px 12px #ffecd2;
+        }
+
+        /* Sun Theme */
+        body.theme-sun {
+            background: linear-gradient(135deg, #fffde4 0%, #ffd89b 100%);
+            color: #23272f;
+        }
+        body.theme-sun .container,
+        body.theme-sun .main,
+        body.theme-sun .todo {
+            background: rgba(255, 255, 240, 0.97);
+            color: #23272f;
+            box-shadow: 0 8px 32px #ffd89b80;
+        }
+        body.theme-sun .todo-btn, body.theme-sun .add-subtask-btn, body.theme-sun .lang-btn, body.theme-sun .notif-btn, body.theme-sun .theme-btn {
+            background: linear-gradient(135deg, #ffd89b 0%, #fffde4 100%);
+            color: #23272f;
+            box-shadow: 0 2px 8px #ffd89b;
+        }
+        body.theme-sun .todo-btn:hover, body.theme-sun .add-subtask-btn:hover, body.theme-sun .lang-btn:hover, body.theme-sun .notif-btn:hover, body.theme-sun .theme-btn:hover {
+            background: linear-gradient(135deg, #fffde4 0%, #ffd89b 100%);
+            color: #23272f;
+            box-shadow: 0 8px 32px #ffd89b;
+        }
+        body.theme-sun .main-title, body.theme-sun .todo-title {
+            color: #ffd89b;
+            text-shadow: 0 2px 12px #fffde4;
+        }
+
+        /* Default Theme (no extra class) is already styled above */
+        #clock-egypt-fixed {
+            position: static;
+            
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            background: linear-gradient(90deg,#1976d2 0%,#43e97b 100%);
+            padding: 14px 36px 14px 28px;
+            border-radius: 0 0 22px 22px;
+            box-shadow: 0 6px 32px #1976d2a0,0 2px 12px #e3eafc;
+            max-width: 420px;
+            min-width: 220px;
+            min-height: 48px;
+            transition: background 0.3s;
+            pointer-events: none;
+            /* pointer-events: none allows click-through, but you can remove if you want it clickable */
+        }
+        @media (max-width: 600px) {
+            #clock-egypt-fixed {
+                font-size: 1.1rem;
+                padding: 10px 10px 10px 10px;
+                max-width: 98vw;
+            }
+        }
+
+        /* Settings Button (fixed top right) */
+        #settings-btn {
+            display: none !important;
+        }
+
+        /* Settings Sidebar */
+        #settings-sidebar {
+            display: none !important;
+        }
+
+        /* Floating Theme Switcher */
+        #floating-theme-switcher {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 999;
+            background: linear-gradient(135deg, #6366f1 0%, #43e97b 100%);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 24px #43e97b80, 0 2px 8px #6366f1;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        #floating-theme-switcher:hover {
+            background: linear-gradient(135deg, #43e97b 0%, #6366f1 100%);
+            box-shadow: 0 8px 32px #6366f1a0;
+            transform: scale(1.08) rotate(12deg);
+        }
+        .theme-switcher-dropdown {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 8px 32px #b3c6e7;
+            z-index: 1000;
+            min-width: 140px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .theme-switcher-dropdown.active {
+            display: flex;
+        }
+        .theme-switcher-dropdown button {
+            background: none;
+            border: none;
+            color: #23272f;
+            padding: 14px 20px;
+            font-size: 1em;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .theme-switcher-dropdown button:hover, .theme-switcher-dropdown button.selected {
+            background: #e3f2fd;
+            color: #6366f1;
+        }
+
+        /* Motivational Quote Box */
+        #quote-box {
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px #b3c6e7;
+            padding: 18px 22px;
+            margin-bottom: 18px;
+            font-size: 1.1em;
+            color: #1976d2;
+            font-style: italic;
+            text-align: center;
+            min-height: 48px;
+        }
+
+        /* Today Button */
+        #today-btn {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 700;
+            padding: 10px 18px;
+            margin-left: 10px;
+            box-shadow: 0 2px 8px #43e97b40;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        #today-btn:hover {
+            background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%);
+            box-shadow: 0 4px 16px #43e97b80;
+        }
+
+        /* Circular Progress */
+        #progress-circle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .progress-circle {
+            width: 70px;
+            height: 70px;
+            position: relative;
+            margin: 0 auto;
+        }
+        .progress-circle svg {
+            transform: rotate(-90deg);
+        }
+        .progress-circle-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #1976d2;
+        }
+
+        /* Hide old theme dropdown */
+        .theme-switcher-dropdown {
+            display: none !important;
+        }
+
+        /* Floating Theme Switcher Button */
+        #floating-theme-switcher {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 1200;
+            background: linear-gradient(135deg, #6366f1 0%, #43e97b 100%);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 62px;
+            height: 62px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            box-shadow: 0 8px 32px #43e97b80, 0 2px 8px #6366f1;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        #floating-theme-switcher:hover {
+            background: linear-gradient(135deg, #43e97b 0%, #6366f1 100%);
+            box-shadow: 0 12px 40px #6366f1a0;
+            transform: scale(1.12) rotate(10deg);
+        }
+
+        /* Floating Theme Sidebar */
+        #floating-theme-sidebar {
+            position: fixed;
+            top: 0;
+            right: -340px;
+            width: 320px;
+            height: 100vh;
+            background: rgba(255,255,255,0.92);
+            box-shadow: -8px 0 32px #6366f1a0;
+            border-radius: 24px 0 0 24px;
+            z-index: 1300;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.38s cubic-bezier(.7,0,.2,1);
+            backdrop-filter: blur(16px);
+            overflow: hidden;
+        }
+        #floating-theme-sidebar.open {
+            right: 0;
+        }
+        #floating-theme-sidebar .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 32px 26px 16px 26px;
+            background: linear-gradient(90deg,#6366f1 60%,#43e97b 100%);
+            border-radius: 24px 0 0 0;
+            box-shadow: 0 2px 12px #6366f1a0;
+        }
+        #floating-theme-sidebar .sidebar-title {
+            font-size: 1.3em;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 12px #43e97b;
+        }
+        #floating-theme-sidebar .sidebar-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 2em;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+        }
+        #floating-theme-sidebar .sidebar-close:hover {
+            color: #43e97b;
+            transform: rotate(90deg) scale(1.2);
+        }
+        #floating-theme-sidebar .sidebar-content {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 0 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            scrollbar-width: thin;
+            scrollbar-color: #6366f1 #e0eafc;
+            margin-top: 8px;
+        }
+        #floating-theme-sidebar .sidebar-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        #floating-theme-sidebar .sidebar-content::-webkit-scrollbar-thumb {
+            background: #6366f1;
+            border-radius: 8px;
+        }
+        #floating-theme-sidebar .sidebar-content::-webkit-scrollbar-track {
+            background: #e0eafc;
+        }
+        .theme-option-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #43e97b 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            padding: 16px 18px;
+            margin-bottom: 0;
+            box-shadow: 0 2px 8px #43e97b40;
+            cursor: pointer;
+            transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .theme-option-btn.selected, .theme-option-btn:hover {
+            background: linear-gradient(135deg, #43e97b 0%, #6366f1 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px #6366f1a0;
+            transform: translateY(-2px) scale(1.05);
+        }
+        .theme-preview {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            margin-right: 10px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 8px #6366f1a0;
+        }
+        /* Responsive */
+        @media (max-width: 600px) {
+            #floating-theme-sidebar {
+                width: 98vw;
+            }
+            #floating-theme-sidebar .sidebar-header,
+            #floating-theme-sidebar .sidebar-content {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+        }
+
+        .attachment-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            background: #f3f8fd;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 0.98em;
+            box-shadow: 0 1px 4px #e3eafc;
+            word-break: break-all;
+        }
+        .attachment-preview .attachment-icon {
+            font-size: 1.3em;
+            margin-right: 6px;
+        }
+        .attachment-preview .attachment-link {
+            color: #1976d2;
+            text-decoration: underline;
+            font-weight: 600;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .attachment-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #43e97b 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 0.98em;
+            margin-top: 6px;
+            cursor: pointer;
+            transition: background 0.18s, box-shadow 0.18s;
+            box-shadow: 0 2px 8px #43e97b40;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .attachment-btn:hover {
+            background: linear-gradient(135deg, #43e97b 0%, #6366f1 100%);
+        }
+        #attachment-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0; top: 0; right: 0; bottom: 0;
+            background: rgba(44,62,80,0.18);
+            align-items: center;
+            justify-content: center;
+        }
+        #attachment-modal.active {
+            display: flex;
+        }
+        #attachment-modal .modal-content {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #6366f1a0;
+            padding: 32px 28px 24px 28px;
+            min-width: 320px;
+            max-width: 90vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeInModal 0.25s;
+            position: relative;
+        }
+        @keyframes fadeInModal {
+            from { opacity: 0; transform: scale(0.95);}
+            to { opacity: 1; transform: scale(1);}
+        }
+        #attachment-modal .modal-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: #6366f1;
+        }
+        #attachment-modal .modal-close {
+            position: absolute;
+            top: 18px; right: 24px;
+            background: none;
+            border: none;
+            font-size: 1.6em;
+            color: #6366f1;
+            cursor: pointer;
+            transition: color 0.18s;
+        }
+        #attachment-modal .modal-close:hover {
+            color: #e74c3c;
+        }
+        #attachment-modal input[type="file"] {
+            margin-bottom: 18px;
+        }
+        .day.has-attachment {
+            position: relative;
+        }
+        .day.has-attachment::before {
+            content: "\f0c6";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            color: #43e97b;
+            font-size: 1.2em;
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 2;
+            background: #fff;
+            border-radius: 50%;
+            padding: 2px 4px;
+            box-shadow: 0 1px 4px #43e97b40;
+        }
+        /* Restore dark mode theme CSS (should already be present) */
+        body.dark-mode {
+            background: linear-gradient(135deg, #23272f 0%, #23272f 100%);
+            color: #f5f6fa;
+        }
+        body.dark-mode .container {
+            background: rgba(44,62,80,0.95);
+            box-shadow: 0 8px 32px rgba(44, 62, 80, 0.33);
+        }
+        body.dark-mode .main, body.dark-mode .todo {
+            background: #23272f;
+            color: #f5f6fa;
+            box-shadow: 0 2px 12px #23272f;
+        }
+        body.dark-mode .day {
+            background: #353b48;
+            color: #f5f6fa;
+            border-color: #23272f;
+        }
+        body.dark-mode .other-month {
+            background: #23272f;
+            color: #636e72;
+        }
+        body.dark-mode .today {
+            background: #636e72;
+            border-color: #636e72;
+        }
+        body.dark-mode .todo-item {
+            background: #353b48;
+            color: #f5f6fa;
+        }
+        body.dark-mode .todo-input, body.dark-mode .subtask-input, body.dark-mode #priority-select, body.dark-mode #category-input, body.dark-mode #reminder-input, body.dark-mode #recurrence-select {
+            background: #23272f;
+            color: #f5f6fa;
+            border-color: #636e72;
+        }
+        body.dark-mode .todo-btn, body.dark-mode .add-subtask-btn, body.dark-mode #dark-mode-toggle {
+            background: #636e72;
+            color: #fff;
+        }
+        body.dark-mode .category-tag {
+            background: #636e72;
+            color: #dfe6e9;
+        }
+        body.dark-mode .progress-bar-bg {
+            background: #636e72;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Fixed Clock at the very top, centered, does not move on scroll -->
+    <div id="clock-egypt-fixed">
+        <i class="fas fa-clock" style="color:#f1c40f;font-size:1.7em;text-shadow:0 2px 8px #fff;"></i>
+        <span id="clock-egypt-time" style="font-family:'Epilogue',monospace;font-size:1.5em;letter-spacing:2px;">--:--</span>
+        <span style="font-size:1.1em;font-weight:600;color:#fff;text-shadow:0 1px 4px #1976d2;margin-left:10px;">Alexandria</span>
+    </div>
+    <div class="container">
+        <section class="main">
+            <h1 class="main-title">PQI Calendar</h1>
+            <div class="month-controls clearfix">
+                <button class="nav-btn prev-month">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <p class="month-name"></p>
+                <button class="nav-btn next-month">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="today-btn" title="Go to Today"><i class="fas fa-calendar-day"></i> Today</button>
+            </div>
+            <div class="weekdays">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+            </div>
+            <div class="days" id="calendar-days"></div>
+        </section>
+
+        <section class="todo">
+            <div id="quote-box"></div>
+            <div id="progress-circle-container">
+                <div class="progress-circle">
+                    <svg width="70" height="70">
+                        <circle cx="35" cy="35" r="30" stroke="#e3eafc" stroke-width="8" fill="none"/>
+                        <circle id="progress-bar-circle" cx="35" cy="35" r="30" stroke="#43e97b" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="188.4" stroke-dashoffset="188.4"/>
+                    </svg>
+                    <span class="progress-circle-text" id="progress-circle-text">0%</span>
+                </div>
+            </div>
+            <h1 class="todo-title">Task Manager
+                <button class="notif-btn" id="notif-btn" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                </button>
+                <div style="display:inline-block;position:relative;">
+                    <button class="lang-btn" id="lang-btn" title="Language">
+                        <i class="fas fa-globe"></i>
+                    </button>
+                    <div class="lang-dropdown" id="lang-dropdown">
+                        <button data-lang="en">English</button>
+                        <button data-lang="ar">العربية</button>
+                        <button data-lang="fr">Français</button>
+                        <button data-lang="es">Español</button>
+                        <button data-lang="de">Deutsch</button>
+                        <button data-lang="zh">中文</button>
+                        <button data-lang="ru">Русский</button>
+                        <button data-lang="it">Italiano</button>
+                        <button data-lang="tr">Türkçe</button>
+                        <button data-lang="ja">日本語</button>
+                        <button data-lang="pt">Português</button>
+                        <button data-lang="hi">हिन्दी</button>
+                        <button data-lang="ko">한국어</button>
+                        <button data-lang="fa">فارسی</button>
+                        <button data-lang="id">Bahasa</button>
+                    </div>
+                </div>
+                <div style="display:inline-block;position:relative;">
+                    <button class="theme-btn" id="theme-btn" title="Theme">
+                        <i class="fas fa-palette"></i>
+                    </button>
+                    <div class="theme-dropdown" id="theme-dropdown">
+                        <button data-theme="default">Default</button>
+                        <button data-theme="neon">Neon</button>
+                        <button data-theme="sun">Sun</button>
+                        <button data-theme="sunrise">Sunrise</button>
+                        <button data-theme="dark">Dark</button>
+                    </div>
+                </div>
+            </h1>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <p class="selected-date" id="selected-date-display">No date selected</p>
+                <input type="text" id="search-bar" placeholder="Search tasks..." style="flex:1;max-width:200px;padding:5px 10px;border-radius:4px;border:1px solid #ddd;">
+                <!-- Removed dark mode toggle button -->
+            </div>
+            <div class="todo-input-container">
+                <input type="text" class="todo-input" placeholder="Add a new task...">
+                <button id="speech-btn" class="todo-btn" title="Speech to Text" style="background:linear-gradient(135deg,#43e97b 0%,#6366f1 100%);">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <select id="priority-select" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                </select>
+                <input type="text" id="category-input" placeholder="Category/Tag" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;max-width:90px;">
+                <input type="datetime-local" id="reminder-input" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;max-width:150px;">
+                <select id="recurrence-select" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;">
+                    <option value="">No Repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+                <!-- Modern file input -->
+                <div class="custom-file-input-wrapper">
+                    <input type="file" id="attachment-input" class="custom-file-input">
+                    <label for="attachment-input" class="custom-file-label">
+                        <i class="fas fa-paperclip"></i>
+                        <span class="file-label-text">Choose File</span>
+                        <span class="file-name" id="file-name"></span>
+                    </label>
+                </div>
+                <button class="todo-btn add">Add</button>
+                <button class="todo-btn reset">Clear</button>
+                <button class="todo-btn allreset">Clear All</button>
+                <button class="todo-btn print">Print</button>
+                <button class="todo-btn" id="export-btn" title="Export PDF">Export PDF</button>
+                <button class="todo-btn" id="import-btn" title="Import JSON">Import</button>
+                <input type="file" id="import-file" accept=".json" style="display:none;">
+            </div>
+            <ul class="todo-list" id="todo-list"></ul>
+        </section>
+    </div>
+    <button id="floating-theme-switcher" title="Switch Theme"><i class="fas fa-adjust"></i></button>
+    <aside id="floating-theme-sidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-title"><i class="fas fa-palette"></i> Theme Switcher</span>
+            <button class="sidebar-close" id="floating-theme-close-btn" title="Close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="sidebar-content" id="floating-theme-list">
+            <button class="theme-option-btn" data-theme="default">
+                <span class="theme-preview" style="background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);"></span>
+                Default
+            </button>
+            <button class="theme-option-btn" data-theme="neon">
+                <span class="theme-preview" style="background: linear-gradient(90deg, #00fff7 0%, #ff00cc 100%);"></span>
+                Neon
+            </button>
+            <button class="theme-option-btn" data-theme="sun">
+                <span class="theme-preview" style="background: linear-gradient(135deg, #fffde4 0%, #ffd89b 100%);"></span>
+                Sun
+            </button>
+            <button class="theme-option-btn" data-theme="sunrise">
+                <span class="theme-preview" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"></span>
+                Sunrise
+            </button>
+            <button class="theme-option-btn" data-theme="dark">
+                <span class="theme-preview" style="background: linear-gradient(135deg, #23272f 0%, #23272f 100%);"></span>
+                Dark
+            </button>
+        </div>
+    </aside>
+    <!-- Attachment Modal -->
+    <div id="attachment-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="attachment-modal-close" title="Close"><i class="fas fa-times"></i></button>
+            <div class="modal-title"><i class="fas fa-paperclip"></i> Attach a Document</div>
+            <input type="file" id="modal-attachment-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf">
+            <button class="attachment-btn" id="modal-attach-btn"><i class="fas fa-upload"></i>Attach</button>
+        </div>
+    </div>
+    <footer style="text-align:center; color:#7f8c8d; margin: 30px 0 10px 0; font-size: 15px;">
+        &copy; 2024 PQI Calendar &mdash; Made by Seif. All rights reserved.
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const monthNameEl = document.querySelector('.month-name');
+            const calendarDaysEl = document.getElementById('calendar-days');
+            const prevMonthBtn = document.querySelector('.prev-month');
+            const nextMonthBtn = document.querySelector('.next-month');
+            const todoInput = document.querySelector('.todo-input');
+            const addTodoBtn = document.querySelector('.add');
+            const resetTodoBtn = document.querySelector('.reset');
+            const allResetTodoBtn = document.querySelector('.allreset');
+            const printBtn = document.querySelector('.todo-btn.print');
+            const todoListEl = document.getElementById('todo-list');
+            const selectedDateDisplay = document.getElementById('selected-date-display');
+            const prioritySelect = document.getElementById('priority-select');
+            const categoryInput = document.getElementById('category-input');
+            const reminderInput = document.getElementById('reminder-input');
+            const recurrenceSelect = document.getElementById('recurrence-select');
+            const attachmentInput = document.getElementById('attachment-input');
+            const searchBar = document.getElementById('search-bar');
+            const exportBtn = document.getElementById('export-btn');
+            const importBtn = document.getElementById('import-btn');
+            const importFile = document.getElementById('import-file');
+            const fileNameSpan = document.getElementById('file-name');
+            const fileLabelText = document.querySelector('.file-label-text');
+            const notifBtn = document.getElementById('notif-btn');
+            let notifActive = false;
+
+            // State
+            let currentDate = new Date();
+            let selectedDate = null;
+            let todos = JSON.parse(localStorage.getItem('todos')) || {};
+            let remindersTimeouts = {};
+
+            // Initialize calendar
+            function initCalendar() {
+                renderCalendar();
+                updateSelectedDateDisplay();
+            }
+
+            // Render calendar for current month
+            function renderCalendar() {
+                calendarDaysEl.innerHTML = '';
+
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+
+                monthNameEl.textContent = new Date(year, month).toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                const firstDayOfMonth = new Date(year, month, 1);
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const startingDay = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
+
+                // Previous month days
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                for (let i = startingDay - 1; i >= 0; i--) {
+                    const day = prevMonthLastDay - i;
+                    const dateStr = formatDate(new Date(year, month - 1, day));
+                    calendarDaysEl.appendChild(createDayElement(day, dateStr, true));
+                }
+
+                // Current month days
+                const today = new Date();
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, month, day);
+                    const dateStr = formatDate(date);
+                    const isToday = date.toDateString() === today.toDateString();
+                    calendarDaysEl.appendChild(createDayElement(day, dateStr, false, isToday));
+                }
+
+                // Next month days
+                const totalCells = Math.ceil((startingDay + daysInMonth) / 7) * 7;
+                const nextMonthDays = totalCells - (startingDay + daysInMonth);
+                for (let day = 1; day <= nextMonthDays; day++) {
+                    const dateStr = formatDate(new Date(year, month + 1, day));
+                    calendarDaysEl.appendChild(createDayElement(day, dateStr, true));
+                }
+
+                // Mark days with todos
+                markDaysWithTodos();
+            }
+
+            // Create day element
+            function createDayElement(day, dateStr, isOtherMonth, isToday = false) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'day';
+                if (isOtherMonth) dayEl.classList.add('other-month');
+                if (isToday) dayEl.classList.add('today');
+                if (dateStr === selectedDate) dayEl.classList.add('selected');
+
+                dayEl.innerHTML = `<div class="day-number">${day}</div>`;
+                dayEl.dataset.date = dateStr;
+
+                dayEl.addEventListener('click', () => {
+                    selectedDate = dateStr;
+                    updateSelectedDateDisplay();
+                    renderTodoList();
+                    renderCalendar(); // Re-render to update selected day styling
+                });
+
+                return dayEl;
+            }
+
+            // Format date as YYYY-MM-DD
+            function formatDate(date) {
+                const d = new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Update selected date display
+            function updateSelectedDateDisplay() {
+                if (selectedDate) {
+                    const date = new Date(selectedDate);
+                    selectedDateDisplay.textContent = date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else {
+                    selectedDateDisplay.textContent = 'No date selected';
+                }
+            }
+
+            // Mark days with todos
+            function markDaysWithTodos() {
+                // Remove previous markers
+                document.querySelectorAll('.day').forEach(dayEl => {
+                    dayEl.classList.remove('has-todo', 'has-attachment');
+                });
+                Object.keys(todos).forEach(date => {
+                    const dayEl = document.querySelector(`.day[data-date="${date}"]`);
+                    if (dayEl && todos[date].length > 0) {
+                        dayEl.classList.add('has-todo');
+                        // Check if any todo for this date has attachments
+                        if (todos[date].some(todo => todo.attachments && todo.attachments.length > 0)) {
+                            dayEl.classList.add('has-attachment');
+                        }
+                    }
+                });
+            }
+
+            // Helper: get filtered todos for search
+            function getFilteredTodos() {
+                if (!selectedDate) return [];
+                let dateTodos = todos[selectedDate] || [];
+                const keyword = searchBar.value.trim().toLowerCase();
+                if (!keyword) return dateTodos;
+                return dateTodos.filter(todo =>
+                    todo.text.toLowerCase().includes(keyword) ||
+                    (todo.category && todo.category.toLowerCase().includes(keyword)) ||
+                    (todo.subtasks && todo.subtasks.some(st => st.text.toLowerCase().includes(keyword)))
+                );
+            }
+
+            // Render todo list for selected date
+            function renderTodoList() {
+                todoListEl.innerHTML = '';
+
+                if (!selectedDate) return;
+
+                const dateTodos = getFilteredTodos();
+
+                if (dateTodos.length === 0) {
+                    const emptyMsg = document.createElement('li');
+                    emptyMsg.textContent = 'No tasks for this day';
+                    emptyMsg.style.color = '#95a5a6';
+                    emptyMsg.style.textAlign = 'center';
+                    emptyMsg.style.padding = '20px';
+                    todoListEl.appendChild(emptyMsg);
+                    return;
+                }
+
+                dateTodos.forEach((todo, index) => {
+                    const todoItem = document.createElement('li');
+                    todoItem.className = 'todo-item priority-' + (todo.priority || 'medium') + (todo.completed ? ' task-completed' : '');
+                    
+                    // Completion checkbox
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = !!todo.completed;
+                    checkbox.style.marginRight = '8px';
+                    checkbox.addEventListener('change', function() {
+                        toggleTaskCompleted(index);
+                    });
+                    
+                    // Create todo item header
+                    const todoItemHeader = document.createElement('div');
+                    todoItemHeader.className = 'todo-item-header';
+                    
+                    // Editable text
+                    const todoText = document.createElement('span');
+                    todoText.className = 'todo-text';
+                    todoText.textContent = todo.text;
+                    todoText.contentEditable = true;
+                    todoText.spellcheck = false;
+                    todoText.addEventListener('blur', function() {
+                        editTodoText(index, todoText.textContent);
+                    });
+                    
+                    // Priority label
+                    const priorityLabel = document.createElement('span');
+                    priorityLabel.className = 'priority-label';
+                    priorityLabel.textContent = todo.priority ? todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1) : 'Medium';
+                    
+                    // Category/tag
+                    const categoryTag = document.createElement('span');
+                    categoryTag.className = 'category-tag';
+                    categoryTag.textContent = todo.category || '';
+                    
+                    // Reminder icon
+                    const reminderIcon = document.createElement('span');
+                    if (todo.reminder) {
+                        reminderIcon.innerHTML = '⏰';
+                        reminderIcon.title = 'Reminder set for ' + new Date(todo.reminder).toLocaleString();
+                        reminderIcon.style.marginLeft = '6px';
+                    }
+                    
+                    // Recurrence icon
+                    const recurrenceIcon = document.createElement('span');
+                    if (todo.recurrence) {
+                        recurrenceIcon.innerHTML = '🔁';
+                        recurrenceIcon.title = 'Repeats: ' + todo.recurrence;
+                        recurrenceIcon.style.marginLeft = '6px';
+                    }
+                    
+                    // Attachments
+                    const attachmentsDiv = document.createElement('span');
+                    if (todo.attachments && todo.attachments.length > 0) {
+                        todo.attachments.forEach((att, attIdx) => {
+                            const a = document.createElement('a');
+                            a.href = att.url;
+                            a.target = '_blank';
+                            a.textContent = '📎';
+                            a.title = att.name;
+                            a.style.marginLeft = '4px';
+                            attachmentsDiv.appendChild(a);
+                        });
+                    }
+                    
+                    // Edit and delete buttons
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'delete-btn';
+                    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+                    editBtn.title = 'Edit';
+                    editBtn.style.background = '#f1c40f';
+                    editBtn.style.color = '#fff';
+                    editBtn.addEventListener('click', function() {
+                        editTodoPrompt(index);
+                    });
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.dataset.index = index;
+                    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    
+                    // Assemble header
+                    todoItemHeader.appendChild(checkbox);
+                    todoItemHeader.appendChild(todoText);
+                    todoItemHeader.appendChild(priorityLabel);
+                    if (todo.category) todoItemHeader.appendChild(categoryTag);
+                    if (todo.reminder) todoItemHeader.appendChild(reminderIcon);
+                    if (todo.recurrence) todoItemHeader.appendChild(recurrenceIcon);
+                    if (todo.attachments && todo.attachments.length > 0) todoItemHeader.appendChild(attachmentsDiv);
+                    todoItemHeader.appendChild(editBtn);
+                    todoItemHeader.appendChild(deleteBtn);
+                    
+                    // Subtask container
+                    const subtaskContainer = document.createElement('div');
+                    subtaskContainer.className = 'subtask-container';
+                    
+                    // Add subtask input
+                    const subtaskInputContainer = document.createElement('div');
+                    subtaskInputContainer.className = 'subtask-input-container';
+                    
+                    const subtaskInput = document.createElement('input');
+                    subtaskInput.className = 'subtask-input';
+                    subtaskInput.type = 'text';
+                    subtaskInput.placeholder = 'Add a subtask...';
+                    
+                    const addSubtaskBtn = document.createElement('button');
+                    addSubtaskBtn.className = 'add-subtask-btn';
+                    addSubtaskBtn.textContent = 'Add';
+                    addSubtaskBtn.dataset.index = index;
+                    
+                    subtaskInputContainer.appendChild(subtaskInput);
+                    subtaskInputContainer.appendChild(addSubtaskBtn);
+                    
+                    // Add subtask list
+                    const subtaskList = document.createElement('div');
+                    subtaskList.className = 'subtask-list';
+                    
+                    // Render existing subtasks
+                    if (todo.subtasks && todo.subtasks.length > 0) {
+                        todo.subtasks.forEach((subtask, subIndex) => {
+                            const subtaskItem = document.createElement('div');
+                            subtaskItem.className = 'subtask-item';
+                            
+                            // Completion checkbox
+                            const subCheckbox = document.createElement('input');
+                            subCheckbox.type = 'checkbox';
+                            subCheckbox.checked = !!subtask.completed;
+                            subCheckbox.className = 'subtask-toggle';
+                            subCheckbox.addEventListener('change', function() {
+                                toggleSubtask(index, subIndex);
+                            });
+                            
+                            // Editable subtask text
+                            const subtaskText = document.createElement('span');
+                            subtaskText.className = 'subtask-text' + (subtask.completed ? ' completed' : '');
+                            subtaskText.textContent = subtask.text;
+                            subtaskText.contentEditable = true;
+                            subtaskText.spellcheck = false;
+                            subtaskText.addEventListener('blur', function() {
+                                editSubtaskText(index, subIndex, subtaskText.textContent);
+                            });
+                            
+                            // Edit and delete buttons
+                            const subEditBtn = document.createElement('button');
+                            subEditBtn.className = 'subtask-delete-btn';
+                            subEditBtn.innerHTML = '✎';
+                            subEditBtn.style.background = '#f1c40f';
+                            subEditBtn.style.color = '#fff';
+                            subEditBtn.addEventListener('click', function() {
+                                editSubtaskPrompt(index, subIndex);
+                            });
+                            
+                            const subtaskDeleteBtn = document.createElement('button');
+                            subtaskDeleteBtn.className = 'subtask-delete-btn';
+                            subtaskDeleteBtn.innerHTML = '×';
+                            subtaskDeleteBtn.dataset.index = index;
+                            subtaskDeleteBtn.dataset.subIndex = subIndex;
+                            subtaskDeleteBtn.addEventListener('click', function() {
+                                deleteSubtask(index, subIndex);
+                            });
+                            
+                            subtaskItem.appendChild(subCheckbox);
+                            subtaskItem.appendChild(subtaskText);
+                            subtaskItem.appendChild(subEditBtn);
+                            subtaskItem.appendChild(subtaskDeleteBtn);
+                            subtaskList.appendChild(subtaskItem);
+                        });
+                    }
+                    
+                    subtaskContainer.appendChild(subtaskInputContainer);
+                    subtaskContainer.appendChild(subtaskList);
+                    
+                    // Progress bar
+                    if (todo.subtasks && todo.subtasks.length > 0) {
+                        const completedCount = todo.subtasks.filter(s => s.completed).length;
+                        const progressBarBg = document.createElement('div');
+                        progressBarBg.className = 'progress-bar-bg';
+                        const progressBar = document.createElement('div');
+                        progressBar.className = 'progress-bar';
+                        progressBar.style.width = (100 * completedCount / todo.subtasks.length) + '%';
+                        progressBarBg.appendChild(progressBar);
+                        subtaskContainer.appendChild(progressBarBg);
+                        const subtaskCount = document.createElement('span');
+                        subtaskCount.className = 'subtask-count';
+                        subtaskCount.textContent = `(${completedCount}/${todo.subtasks.length} completed)`;
+                        todoText.appendChild(subtaskCount);
+                    }
+                    
+                    // Assemble todo item
+                    todoItem.appendChild(todoItemHeader);
+                    todoItem.appendChild(subtaskContainer);
+                    todoListEl.appendChild(todoItem);
+                    
+                    // Add event listeners
+                    deleteBtn.addEventListener('click', function() {
+                        deleteTodo(index);
+                    });
+                    
+                    addSubtaskBtn.addEventListener('click', function() {
+                        const text = subtaskInput.value.trim();
+                        if (text) {
+                            addSubtask(index, text);
+                            subtaskInput.value = '';
+                        }
+                    });
+                    
+                    subtaskInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            const text = this.value.trim();
+                            if (text) {
+                                addSubtask(index, text);
+                                this.value = '';
+                            }
+                        }
+                    });
+                });
+                // Add attachment preview and attach button to each todo
+                if (!selectedDate || !todos[selectedDate]) return;
+                const items = document.querySelectorAll('.todo-list .todo-item');
+                todos[selectedDate].forEach((todo, idx) => {
+                    const item = items[idx];
+                    if (!item) return;
+                    // Attach button
+                    const attachBtn = document.createElement('button');
+                    attachBtn.className = 'attachment-btn';
+                    attachBtn.innerHTML = '<i class="fas fa-paperclip"></i> Attach File';
+                    attachBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openAttachmentModal(idx);
+                    });
+                    item.appendChild(attachBtn);
+                    // Attachment preview
+                    if (todo.attachments && todo.attachments.length > 0) {
+                        todo.attachments.forEach(att => {
+                            const preview = document.createElement('div');
+                            preview.className = 'attachment-preview';
+                            let icon = '<i class="fas fa-file"></i>';
+                            if (att.type && att.type.includes('pdf')) icon = '<i class="fas fa-file-pdf" style="color:#e74c3c"></i>';
+                            else if (att.type && (att.type.includes('word') || att.name.match(/\.(doc|docx)$/i))) icon = '<i class="fas fa-file-word" style="color:#1976d2"></i>';
+                            else if (att.type && (att.type.includes('excel') || att.name.match(/\.(xls|xlsx|csv)$/i))) icon = '<i class="fas fa-file-excel" style="color:#43e97b"></i>';
+                            else if (att.type && (att.type.includes('powerpoint') || att.name.match(/\.(ppt|pptx)$/i))) icon = '<i class="fas fa-file-powerpoint" style="color:#f39c12"></i>';
+                            preview.innerHTML = `<span class="attachment-icon">${icon}</span>
+                                <a class="attachment-link" href="${att.url}" target="_blank">${att.name}</a>`;
+                            item.appendChild(preview);
+                        });
+                    }
+                });
+                updateProgressCircle();
+            }
+
+            // Add new todo
+            function addTodo() {
+                if (!selectedDate) {
+                    alert('Please select a date first');
+                    return;
+                }
+
+                const text = todoInput.value.trim();
+                if (!text) return;
+
+                const priority = prioritySelect.value;
+                const category = categoryInput.value.trim();
+                const reminder = reminderInput.value ? new Date(reminderInput.value).toISOString() : null;
+                const recurrence = recurrenceSelect.value;
+                let attachments = [];
+                if (attachmentInput.files && attachmentInput.files.length > 0) {
+                    for (let i = 0; i < attachmentInput.files.length; i++) {
+                        const file = attachmentInput.files[i];
+                        const url = URL.createObjectURL(file);
+                        attachments.push({ name: file.name, url });
+                    }
+                }
+
+                if (!todos[selectedDate]) todos[selectedDate] = [];
+
+                const todoObj = {
+                    text,
+                    priority,
+                    category,
+                    reminder,
+                    recurrence,
+                    completed: false,
+                    subtasks: [],
+                    attachments
+                };
+
+                todos[selectedDate].push(todoObj);
+                saveTodos();
+                todoInput.value = '';
+                categoryInput.value = '';
+                reminderInput.value = '';
+                recurrenceSelect.value = '';
+                attachmentInput.value = '';
+                renderTodoList();
+                renderCalendar();
+                if (reminder) scheduleReminder(selectedDate, todos[selectedDate].length - 1, reminder, text);
+            }
+
+            // Edit todo text
+            function editTodoText(index, newText) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][index]) return;
+                todos[selectedDate][index].text = newText;
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Edit subtask text
+            function editSubtaskText(todoIndex, subIndex, newText) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex] ||
+                    !todos[selectedDate][todoIndex].subtasks || !todos[selectedDate][todoIndex].subtasks[subIndex]) return;
+                todos[selectedDate][todoIndex].subtasks[subIndex].text = newText;
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Edit todo prompt
+            function editTodoPrompt(index) {
+                const todo = todos[selectedDate][index];
+                const newText = prompt('Edit task:', todo.text);
+                if (newText !== null) {
+                    todo.text = newText;
+                    saveTodos();
+                    renderTodoList();
+                }
+            }
+
+            // Edit subtask prompt
+            function editSubtaskPrompt(todoIndex, subIndex) {
+                const subtask = todos[selectedDate][todoIndex].subtasks[subIndex];
+                const newText = prompt('Edit subtask:', subtask.text);
+                if (newText !== null) {
+                    subtask.text = newText;
+                    saveTodos();
+                    renderTodoList();
+                }
+            }
+
+            // Toggle task completed
+            function toggleTaskCompleted(index) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][index]) return;
+                todos[selectedDate][index].completed = !todos[selectedDate][index].completed;
+                saveTodos();
+                renderTodoList();
+                renderCalendar();
+            }
+
+            // Add subtask to a todo
+            function addSubtask(todoIndex, text) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex]) return;
+                
+                if (!todos[selectedDate][todoIndex].subtasks) {
+                    todos[selectedDate][todoIndex].subtasks = [];
+                }
+                
+                todos[selectedDate][todoIndex].subtasks.push({
+                    text: text,
+                    completed: false
+                });
+                
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Toggle subtask completion status
+            function toggleSubtask(todoIndex, subtaskIndex) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex] || 
+                    !todos[selectedDate][todoIndex].subtasks || !todos[selectedDate][todoIndex].subtasks[subtaskIndex]) return;
+                
+                todos[selectedDate][todoIndex].subtasks[subtaskIndex].completed = 
+                    !todos[selectedDate][todoIndex].subtasks[subtaskIndex].completed;
+                
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Delete subtask
+            function deleteSubtask(todoIndex, subtaskIndex) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex] || 
+                    !todos[selectedDate][todoIndex].subtasks || !todos[selectedDate][todoIndex].subtasks[subtaskIndex]) return;
+                
+                todos[selectedDate][todoIndex].subtasks.splice(subtaskIndex, 1);
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Delete todo
+            function deleteTodo(index) {
+                if (!selectedDate || !todos[selectedDate]) return;
+
+                todos[selectedDate].splice(index, 1);
+                if (!todos[selectedDate] || todos[selectedDate].length === 0) {
+                    delete todos[selectedDate];
+                }
+                saveTodos();
+                renderTodoList();
+                renderCalendar();
+                updateProgressCircle();
+            }
+
+            // Reset todos for selected date
+            function resetTodos() {
+                if (!selectedDate) return;
+                if (confirm('Are you sure you want to clear all tasks for this day?')) {
+                    delete todos[selectedDate];
+                    saveTodos();
+                    renderTodoList();
+                    renderCalendar();
+                }
+            }
+
+            // Reset all todos
+            function resetAllTodos() {
+                if (confirm('Are you sure you want to clear ALL tasks?')) {
+                    todos = {};
+                    saveTodos();
+                    renderTodoList();
+                    renderCalendar();
+                }
+            }
+
+            // Print todos
+            function printTodos() {
+                window.print();
+            }
+
+            // Save todos to localStorage
+            function saveTodos() {
+                localStorage.setItem('todos', JSON.stringify(todos));
+            }
+
+            // Reminders
+            function scheduleReminder(date, index, reminderISO, text) {
+                const now = Date.now();
+                const reminderTime = new Date(reminderISO).getTime();
+                if (reminderTime > now) {
+                    const timeout = setTimeout(() => {
+                        if (window.Notification && Notification.permission === "granted") {
+                            new Notification("Task Reminder", { body: text });
+                        } else {
+                            alert("Reminder: " + text);
+                        }
+                    }, reminderTime - now);
+                    remindersTimeouts[date + '-' + index] = timeout;
+                }
+            }
+
+            // Request notification permission
+            if (window.Notification && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+
+            // Reschedule all reminders on load
+            function rescheduleAllReminders() {
+                Object.keys(remindersTimeouts).forEach(k => clearTimeout(remindersTimeouts[k]));
+                remindersTimeouts = {};
+                Object.keys(todos).forEach(date => {
+                    todos[date].forEach((todo, idx) => {
+                        if (todo.reminder) scheduleReminder(date, idx, todo.reminder, todo.text);
+                    });
+                });
+            }
+
+            // Recurring tasks: on each day render, check for recurrence and add if needed
+            function handleRecurringTasks() {
+                const todayStr = formatDate(new Date());
+                Object.keys(todos).forEach(date => {
+                    todos[date].forEach(todo => {
+                        if (todo.recurrence && !todos[todayStr]?.some(t => t.text === todo.text)) {
+                            let shouldAdd = false;
+                            if (todo.recurrence === 'daily') shouldAdd = true;
+                            if (todo.recurrence === 'weekly' && new Date(date).getDay() === new Date().getDay()) shouldAdd = true;
+                            if (todo.recurrence === 'monthly' && new Date(date).getDate() === new Date().getDate()) shouldAdd = true;
+                            if (shouldAdd) {
+                                if (!todos[todayStr]) todos[todayStr] = [];
+                                todos[todayStr].push({ ...todo, reminder: null }); // Don't copy reminder
+                            }
+                        }
+                    });
+                });
+                saveTodos();
+            }
+
+            // Export/import
+            exportBtn.addEventListener('click', function() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(todos));
+                const dl = document.createElement('a');
+                dl.setAttribute('href', dataStr);
+                dl.setAttribute('download', 'tasks_backup.json');
+                dl.click();
+            });
+
+            importBtn.addEventListener('click', function() {
+                importFile.click();
+            });
+
+            importFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const imported = JSON.parse(evt.target.result);
+                        if (typeof imported === 'object') {
+                            todos = imported;
+                            saveTodos();
+                            renderTodoList();
+                            renderCalendar();
+                            rescheduleAllReminders();
+                        }
+                    } catch (err) { alert('Invalid file'); }
+                };
+                reader.readAsText(file);
+            });
+
+            // Search/filter
+            searchBar.addEventListener('input', renderTodoList);
+
+            // PDF Export
+            exportBtn.addEventListener('click', function() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                let y = 15;
+                doc.setFontSize(18);
+                doc.text("Tasks for " + (selectedDate || "No date selected"), 10, y);
+                y += 10;
+                doc.setFontSize(12);
+                const dateTodos = selectedDate ? (todos[selectedDate] || []) : [];
+                if (dateTodos.length === 0) {
+                    doc.text("No tasks for this day.", 10, y);
+                } else {
+                    dateTodos.forEach((todo, idx) => {
+                        let txt = `${idx + 1}. [${todo.completed ? "x" : " "}] ${todo.text} (${todo.priority || "medium"})`;
+                        if (todo.category) txt += ` [${todo.category}]`;
+                        doc.text(txt, 10, y);
+                        y += 8;
+                        if (todo.subtasks && todo.subtasks.length > 0) {
+                            todo.subtasks.forEach((sub, sidx) => {
+                                doc.text(`   - [${sub.completed ? "x" : " "}] ${sub.text}`, 14, y);
+                                y += 7;
+                            });
+                        }
+                        if (todo.attachments && todo.attachments.length > 0) {
+                            todo.attachments.forEach(att => {
+                                doc.text(`   📎 ${att.name}`, 14, y);
+                                y += 7;
+                            });
+                        }
+                        if (todo.reminder) {
+                            doc.text(`   ⏰ Reminder: ${new Date(todo.reminder).toLocaleString()}`, 14, y);
+                            y += 7;
+                        }
+                        if (todo.recurrence) {
+                            doc.text(`   🔁 Repeats: ${todo.recurrence}`, 14, y);
+                            y += 7;
+                        }
+                        y += 2;
+                        if (y > 270) { doc.addPage(); y = 15; }
+                    });
+                }
+                doc.save('tasks.pdf');
+            });
+
+            // Show selected file name in custom file input
+            attachmentInput.addEventListener('change', function() {
+                if (attachmentInput.files && attachmentInput.files.length > 0) {
+                    fileNameSpan.textContent = attachmentInput.files[0].name;
+                    fileLabelText.textContent = "File Selected";
+                } else {
+                    fileNameSpan.textContent = "";
+                    fileLabelText.textContent = "Choose File";
+                }
+            });
+
+            // Event listeners
+            prevMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            addTodoBtn.addEventListener('click', addTodo);
+            todoInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTodo();
+            });
+
+            resetTodoBtn.addEventListener('click', resetTodos);
+            allResetTodoBtn.addEventListener('click', resetAllTodos);
+            printBtn.addEventListener('click', printTodos);
+
+            // Notification icon animation on new task
+            function triggerNotifIcon() {
+                notifBtn.classList.add('active');
+                setTimeout(() => notifBtn.classList.remove('active'), 600);
+            }
+
+            // Notification permission
+            if (window.Notification && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+
+            // Show notification for every new task
+            const origAddTodo = addTodo;
+
+            function addTodoWithNotif() {
+                origAddTodo();
+                if (window.Notification && Notification.permission === "granted" && todoInput.value.trim() !== "") {
+                    new Notification("Task Added", { body: todoInput.value.trim() });
+                }
+                triggerNotifIcon();
+            }
+
+            addTodoBtn.removeEventListener('click', addTodo);
+            addTodoBtn.addEventListener('click', addTodoWithNotif);
+            todoInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTodoWithNotif();
+            });
+            notifBtn.addEventListener('click', function() {
+                alert('You will receive notifications for new tasks and reminders.');
+            });
+
+            // Language switcher
+            const langBtn = document.getElementById('lang-btn');
+            const langDropdown = document.getElementById('lang-dropdown');
+            let currentLang = localStorage.getItem('lang') || 'en';
+            langBtn.addEventListener('click', function(e) {
+                langDropdown.classList.toggle('active');
+                e.stopPropagation();
+            });
+            document.addEventListener('click', function() {
+                langDropdown.classList.remove('active');
+            });
+            langDropdown.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    currentLang = btn.getAttribute('data-lang');
+                    localStorage.setItem('lang', currentLang);
+                    setLanguage(currentLang);
+                    langDropdown.classList.remove('active');
+                    langDropdown.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+            });
+
+            // Extended i18n dictionary
+            const i18n = {
+                en: {
+                    'Task Manager': 'Task Manager',
+                    'Add a new task...': 'Add a new task...',
+                    'Category/Tag': 'Category/Tag',
+                    'No date selected': 'No date selected',
+                    'Clear': 'Clear',
+                    'Clear All': 'Clear All',
+                    'Print': 'Print',
+                    'Export PDF': 'Export PDF',
+                    'Import': 'Import',
+                    'Medium': 'Medium',
+                    'High': 'High',
+                    'Low': 'Low',
+                    'No Repeat': 'No Repeat',
+                    'Daily': 'Daily',
+                    'Weekly': 'Weekly',
+                    'Monthly': 'Monthly',
+                    'Search tasks...': 'Search tasks...',
+                    'Tasks for ': 'Tasks for ',
+                    'No tasks for this day': 'No tasks for this day'
+                },
+                ar: {
+                    'Task Manager': 'مدير المهام',
+                    'Add a new task...': 'أضف مهمة جديدة...',
+                    'Category/Tag': 'فئة/وسم',
+                    'No date selected': 'لم يتم اختيار تاريخ',
+                    'Clear': 'مسح',
+                    'Clear All': 'مسح الكل',
+                    'Print': 'طباعة',
+                    'Export PDF': 'تصدير PDF',
+                    'Import': 'استيراد',
+                    'Medium': 'متوسطة',
+                    'High': 'عالية',
+                    'Low': 'منخفضة',
+                    'No Repeat': 'بدون تكرار',
+                    'Daily': 'يومي',
+                    'Weekly': 'أسبوعي',
+                    'Monthly': 'شهري',
+                    'Search tasks...': 'ابحث في المهام...',
+                    'Tasks for ': 'المهام لـ ',
+                    'No tasks for this day': 'لا توجد مهام لهذا اليوم'
+                },
+                fr: {
+                    'Task Manager': 'Gestionnaire de tâches',
+                    'Add a new task...': 'Ajouter une nouvelle tâche...',
+                    'Category/Tag': 'Catégorie/Étiquette',
+                    'No date selected': 'Aucune date sélectionnée',
+                    'Clear': 'Effacer',
+                    'Clear All': 'Tout effacer',
+                    'Print': 'Imprimer',
+                    'Export PDF': 'Exporter PDF',
+                    'Import': 'Importer',
+                    'Medium': 'Moyenne',
+                    'High': 'Haute',
+                    'Low': 'Basse',
+                    'No Repeat': 'Pas de répétition',
+                    'Daily': 'Quotidien',
+                    'Weekly': 'Hebdomadaire',
+                    'Monthly': 'Mensuel',
+                    'Search tasks...': 'Rechercher des tâches...',
+                    'Tasks for ': 'Tâches pour ',
+                    'No tasks for this day': 'Aucune tâche pour ce jour'
+                },
+                es: {
+                    'Task Manager': 'Gestor de tareas',
+                    'Add a new task...': 'Agregar nueva tarea...',
+                    'Category/Tag': 'Categoría/Etiqueta',
+                    'No date selected': 'Sin fecha seleccionada',
+                    'Clear': 'Limpiar',
+                    'Clear All': 'Limpiar todo',
+                    'Print': 'Imprimir',
+                    'Export PDF': 'Exportar PDF',
+                    'Import': 'Importar',
+                    'Medium': 'Media',
+                    'High': 'Alta',
+                    'Low': 'Baja',
+                    'No Repeat': 'Sin repetición',
+                    'Daily': 'Diario',
+                    'Weekly': 'Semanal',
+                    'Monthly': 'Mensual',
+                    'Search tasks...': 'Buscar tareas...',
+                    'Tasks for ': 'Tareas para ',
+                    'No tasks for this day': 'No hay tareas para este día'
+                },
+                de: {
+                    'Task Manager': 'Aufgabenmanager',
+                    'Add a new task...': 'Neue Aufgabe hinzufügen...',
+                    'Category/Tag': 'Kategorie/Tag',
+                    'No date selected': 'Kein Datum ausgewählt',
+                    'Clear': 'Löschen',
+                    'Clear All': 'Alles löschen',
+                    'Print': 'Drucken',
+                    'Export PDF': 'PDF exportieren',
+                    'Import': 'Importieren',
+                    'Medium': 'Mittel',
+                    'High': 'Hoch',
+                    'Low': 'Niedrig',
+                    'No Repeat': 'Keine Wiederholung',
+                    'Daily': 'Täglich',
+                    'Weekly': 'Wöchentlich',
+                    'Monthly': 'Monatlich',
+                    'Search tasks...': 'Aufgaben suchen...',
+                    'Tasks for ': 'Aufgaben für ',
+                    'No tasks for this day': 'Keine Aufgaben für diesen Tag'
+                },
+                zh: {
+                    'Task Manager': '任务管理器',
+                    'Add a new task...': '添加新任务...',
+                    'Category/Tag': '类别/标签',
+                    'No date selected': '未选择日期',
+                    'Clear': '清除',
+                    'Clear All': '全部清除',
+                    'Print': '打印',
+                    'Export PDF': '导出PDF',
+                    'Import': '导入',
+                    'Medium': '中',
+                    'High': '高',
+                    'Low': '低',
+                    'No Repeat': '不重复',
+                    'Daily': '每天',
+                    'Weekly': '每周',
+                    'Monthly': '每月',
+                    'Search tasks...': '搜索任务...',
+                    'Tasks for ': '任务：',
+                    'No tasks for this day': '这一天没有任务'
+                },
+                ru: {
+                    'Task Manager': 'Менеджер задач',
+                    'Add a new task...': 'Добавить новую задачу...',
+                    'Category/Tag': 'Категория/Тег',
+                    'No date selected': 'Дата не выбрана',
+                    'Clear': 'Очистить',
+                    'Clear All': 'Очистить все',
+                    'Print': 'Печать',
+                    'Export PDF': 'Экспорт PDF',
+                    'Import': 'Импорт',
+                    'Medium': 'Средний',
+                    'High': 'Высокий',
+                    'Low': 'Низкий',
+                    'No Repeat': 'Без повтора',
+                    'Daily': 'Ежедневно',
+                    'Weekly': 'Еженедельно',
+                    'Monthly': 'Ежемесячно',
+                    'Search tasks...': 'Поиск задач...',
+                    'Tasks for ': 'Задачи на ',
+                    'No tasks for this day': 'Нет задач на этот день'
+                },
+                it: {
+                    'Task Manager': 'Gestore attività',
+                    'Add a new task...': 'Aggiungi nuova attività...',
+                    'Category/Tag': 'Categoria/Etichetta',
+                    'No date selected': 'Nessuna data selezionata',
+                    'Clear': 'Cancella',
+                    'Clear All': 'Cancella tutto',
+                    'Print': 'Stampa',
+                    'Export PDF': 'Esporta PDF',
+                    'Import': 'Importa',
+                    'Medium': 'Media',
+                    'High': 'Alta',
+                    'Low': 'Bassa',
+                    'No Repeat': 'Nessuna ripetizione',
+                    'Daily': 'Giornaliero',
+                    'Weekly': 'Settimanale',
+                    'Tasks for ': '작업: ',
+                    'No tasks for this day': '이 날의 작업이 없습니다'
+                },
+                tr: {
+                    'Task Manager': 'Görev Yöneticisi',
+                    'Add a new task...': 'Yeni görev ekle...',
+                    'Category/Tag': 'Kategori/Etiket',
+                    'No date selected': 'Tarih seçilmedi',
+                    'Clear': 'Temizle',
+                    'Clear All': 'Hepsini Temizle',
+                    'Print': 'Yazdır',
+                    'Export PDF': 'PDF Dışa Aktar',
+                    'Import': 'İçe Aktar',
+                    'Medium': 'Orta',
+                    'High': 'Yüksek',
+                    'Low': 'Düşük',
+                    'No Repeat': 'Tekrar yok',
+                    'Daily': 'Günlük',
+                    'Weekly': 'Haftalık',
+                    'Tasks for ': '작업: ',
+                    'No tasks for this day': '이 날의 작업이 없습니다'
+                },
+                ja: {
+                    'Task Manager': 'タスク管理',
+                    'Add a new task...': '新しいタスクを追加...',
+                    'Category/Tag': 'カテゴリ/タグ',
+                    'No date selected': '日付が選択されていません',
+                    'Clear': 'クリア',
+                    'Clear All': 'すべてクリア',
+                    'Print': '印刷',
+                    'Export PDF': 'PDFエクスポート',
+                    'Import': 'インポート',
+                    'Medium': '中',
+                    'High': '高',
+                    'Low': '低',
+                    'No Repeat': '繰り返しなし',
+                    'Daily': '毎日',
+                    'Weekly': '毎週',
+                    'Monthly': '毎月',
+                    'Search tasks...': 'タスクを検索...',
+                    'Tasks for ': 'タスク：',
+                    'No tasks for this day': 'この日のタスクはありません'
+                },
+                pt: {
+                    'Task Manager': 'Gerenciador de Tarefas',
+                    'Add a new task...': 'Adicionar nova tarefa...',
+                    'Category/Tag': 'Categoria/Etiqueta',
+                    'No date selected': 'Nenhuma data selecionada',
+                    'Clear': 'Limpar',
+                    'Clear All': 'Limpar tudo',
+                    'Print': 'Imprimir',
+                    'Export PDF': 'Exportar PDF',
+                    'Import': 'Importar',
+                    'Medium': 'Média',
+                    'High': 'Alta',
+                    'Low': 'Baixa',
+                    'No Repeat': 'Sem repetição',
+                    'Daily': 'Diário',
+                    'Weekly': 'Semanal',
+                    'Tasks for ': '작업: ',
+                    'No tasks for this day': '이 날의 작업이 없습니다'
+                },
+                fa: {
+                    'Task Manager': 'مدیر وظایف',
+                    'Add a new task...': 'افزودن وظیفه جدید...',
+                    'Category/Tag': 'دسته/برچسب',
+                    'No date selected': 'تاریخی انتخاب نشده است',
+                    'Clear': 'پاک کردن',
+                    'Clear All': 'پاک کردن همه',
+                    'Print': 'چاپ',
+                    'Export PDF': 'خروجی PDF',
+                    'Import': 'وارد کردن',
+                    'Medium': 'متوسط',
+                    'High': 'بالا',
+                    'Low': 'کم',
+                    'No Repeat': 'بدون تکرار',
+                    'Daily': 'روزانه',
+                    'Weekly': 'هفتگی',
+                    'Monthly': 'ماهانه',
+                    'Search tasks...': 'جستجوی وظایف...',
+                    'Tasks for ': 'وظایف برای ',
+                    'No tasks for this day': 'هیچ وظیفه‌ای برای این روز وجود ندارد'
+                },
+                id: {
+                    'Task Manager': 'Manajer Tugas',
+                    'Add a new task...': 'Tambah tugas baru...',
+                    'Category/Tag': 'Kategori/Tag',
+                    'No date selected': 'Tidak ada tanggal dipilih',
+                    'Clear': 'Bersihkan',
+                    'Clear All': 'Bersihkan Semua',
+                    'Print': 'Cetak',
+                    'Export PDF': 'Ekspor PDF',
+                    'Import': 'Impor',
+                    'Medium': 'Sedang',
+                    'High': 'Tinggi',
+                    'Low': 'Rendah',
+                    'No Repeat': 'Tidak Berulang',
+                    'Daily': 'Harian',
+                    'Weekly': 'Mingguan',
+                    'Monthly': 'Bulanan',
+                    'Search tasks...': 'Cari tugas...',
+                    'Tasks for ': 'Tugas untuk ',
+                    'No tasks for this day': 'Tidak ada tugas untuk hari ini'
+                }
+            };
+
+            function setLanguage(lang) {
+                const dict = i18n[lang] || i18n['en'];
+                document.querySelector('.todo-title').childNodes[0].nodeValue = dict['Task Manager'] + ' ';
+                todoInput.placeholder = dict['Add a new task...'];
+                document.getElementById('category-input').placeholder = dict['Category/Tag'];
+                document.getElementById('selected-date-display').textContent = dict['No date selected'];
+                addTodoBtn.innerHTML = `<i class="fas fa-plus"></i> ${dict['Add a new task...'].split(' ')[0]}`;
+                resetTodoBtn.innerHTML = `<i class="fas fa-eraser"></i> ${dict['Clear']}`;
+                allResetTodoBtn.innerHTML = `<i class="fas fa-trash"></i> ${dict['Clear All']}`;
+                printBtn.innerHTML = `<i class="fas fa-print"></i> ${dict['Print']}`;
+                exportBtn.innerHTML = `<i class="fas fa-file-export"></i> ${dict['Export PDF']}`;
+                importBtn.innerHTML = `<i class="fas fa-file-import"></i> ${dict['Import']}`;
+                // Priority select
+                prioritySelect.options[0].text = dict['Medium'];
+                prioritySelect.options[1].text = dict['High'];
+                prioritySelect.options[2].text = dict['Low'];
+                // Recurrence select
+                recurrenceSelect.options[0].text = dict['No Repeat'];
+                recurrenceSelect.options[1].text = dict['Daily'];
+                recurrenceSelect.options[2].text = dict['Weekly'];
+                recurrenceSelect.options[3].text = dict['Monthly'];
+                // Search bar
+                searchBar.placeholder = dict['Search tasks...'];
+                // Direction for RTL languages
+                if (['ar','fa','he','ur'].includes(lang)) {
+                    document.body.dir = 'rtl';
+                    document.body.style.textAlign = 'right';
+                } else {
+                    document.body.dir = 'ltr';
+                    document.body.style.textAlign = '';
+                }
+            }
+            setLanguage(currentLang);
+
+            
+            const themeBtn = document.getElementById('theme-btn');
+            const themeDropdown = document.getElementById('theme-dropdown');
+            let currentTheme = localStorage.getItem('theme') || 'default';
+            themeBtn.addEventListener('click', function(e) {
+                themeDropdown.classList.toggle('active');
+                e.stopPropagation();
+            });
+            document.addEventListener('click', function() {
+                themeDropdown.classList.remove('active');
+            });
+            themeDropdown.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    currentTheme = btn.getAttribute('data-theme');
+                    localStorage.setItem('theme', currentTheme);
+                    setTheme(currentTheme);
+                    themeDropdown.classList.remove('active');
+                    themeDropdown.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+            });
+            function setTheme(theme) {
+                document.body.classList.remove('theme-neon', 'theme-sun', 'theme-sunrise', 'dark-mode');
+                if (theme === 'neon') document.body.classList.add('theme-neon');
+                else if (theme === 'sun') document.body.classList.add('theme-sun');
+                else if (theme === 'sunrise') document.body.classList.add('theme-sunrise');
+                else if (theme === 'dark') document.body.classList.add('dark-mode');
+                // default: no extra class
+            }
+            setTheme(currentTheme);
+
+            // Egypt Alexandria Clock - fixed top, 12-hour format, no scroll, pro design
+            function updateEgyptClock() {
+                const options = {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: 'Africa/Cairo'
+                };
+                const now = new Date();
+                let timeStr = new Intl.DateTimeFormat('en-US', options).format(now);
+                // Always show as 06:05 not 6:05
+                if (timeStr.match(/^\d:/)) timeStr = '0' + timeStr;
+                // Remove seconds and AM/PM spacing
+                document.getElementById('clock-egypt-time').textContent = timeStr.replace(' ', '');
+            }
+            updateEgyptClock();
+            setInterval(updateEgyptClock, 1000);
+
+            // Initialize
+            initCalendar();
+            rescheduleAllReminders();
+            handleRecurringTasks();
+            
+            // Today Button
+            const todayBtn = document.getElementById('today-btn');
+            todayBtn.addEventListener('click', function() {
+                currentDate = new Date();
+                selectedDate = formatDate(currentDate);
+                renderCalendar();
+                updateSelectedDateDisplay();
+                renderTodoList();
+            });
+
+            // Motivational Quotes
+            const quotes = [
+                "Success is not the key to happiness. Happiness is the key to success.",
+                "The secret of getting ahead is getting started.",
+                "Don’t watch the clock; do what it does. Keep going.",
+                "Great things never come from comfort zones.",
+                "Dream it. Wish it. Do it.",
+                "Stay positive, work hard, make it happen.",
+                "Push yourself, because no one else is going to do it for you.",
+                "The harder you work for something, the greater you’ll feel when you achieve it.",
+                "Don’t stop when you’re tired. Stop when you’re done.",
+                "Little things make big days."
+            ];
+            function showRandomQuote() {
+                const quoteBox = document.getElementById('quote-box');
+                quoteBox.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+            }
+            showRandomQuote();
+
+            // Progress Circle
+            function updateProgressCircle() {
+                const circle = document.getElementById('progress-bar-circle');
+                const text = document.getElementById('progress-circle-text');
+                if (!selectedDate || !todos[selectedDate] || todos[selectedDate].length === 0) {
+                    circle.style.strokeDashoffset = 188.4;
+                    text.textContent = "0%";
+                    return;
+                }
+                const total = todos[selectedDate].length;
+                const completed = todos[selectedDate].filter(t => t.completed).length;
+                const percent = Math.round((completed / total) * 100);
+                const offset = 188.4 - (188.4 * percent / 100);
+                circle.style.strokeDashoffset = offset;
+                text.textContent = percent + "%";
+            }
+
+            // Call after rendering todos
+            const origRenderTodoListForProgress = renderTodoList;
+            renderTodoList = function() {
+                origRenderTodoListForProgress();
+                updateProgressCircle();
+            };
+
+            // Floating Theme Switcher
+            const floatingThemeBtn = document.getElementById('floating-theme-switcher');
+            const floatingThemeSidebar = document.getElementById('floating-theme-sidebar');
+            const floatingThemeCloseBtn = document.getElementById('floating-theme-close-btn');
+            const floatingThemeList = document.getElementById('floating-theme-list');
+            floatingThemeBtn.addEventListener('click', function(e) {
+                floatingThemeSidebar.classList.add('open');
+                // Highlight current theme
+                floatingThemeList.querySelectorAll('.theme-option-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.getAttribute('data-theme') === currentTheme);
+                });
+                e.stopPropagation();
+            });
+            floatingThemeCloseBtn.addEventListener('click', function() {
+                floatingThemeSidebar.classList.remove('open');
+            });
+            // Click outside sidebar to close
+            document.addEventListener('mousedown', function(e) {
+                if (floatingThemeSidebar.classList.contains('open') &&
+                    !floatingThemeSidebar.contains(e.target) &&
+                    e.target !== floatingThemeBtn) {
+                    floatingThemeSidebar.classList.remove('open');
+                }
+            });
+            // ESC to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') floatingThemeSidebar.classList.remove('open');
+            });
+            // Theme selection
+            floatingThemeList.querySelectorAll('.theme-option-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentTheme = btn.getAttribute('data-theme');
+                    localStorage.setItem('theme', currentTheme);
+                    setTheme(currentTheme);
+                    floatingThemeSidebar.classList.remove('open');
+                });
+            });
+
+            // Initial progress circle update
+            updateProgressCircle();
+
+            // Speech to Text Button
+            const speechBtn = document.getElementById('speech-btn');
+            let recognition;
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                // Always prefer Arabic if UI language or user language is Arabic, else use browser language
+                let userLang = (localStorage.getItem('lang') || navigator.language || navigator.userLanguage || '').toLowerCase();
+                if (userLang.startsWith('ar')) {
+                    recognition.lang = 'ar-EG';
+                } else if (userLang) {
+                    recognition.lang = userLang;
+                } else {
+                    recognition.lang = 'en-US';
+                }
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+                speechBtn.addEventListener('click', function() {
+                    speechBtn.disabled = true;
+                    speechBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    recognition.start();
+                });
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    todoInput.value = transcript;
+                    speechBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    speechBtn.disabled = false;
+                    todoInput.focus();
+                };
+                recognition.onerror = function(e) {
+                    speechBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                    speechBtn.disabled = false;
+                    alert('Speech recognition error: ' + (e.error || 'Please try again.'));
+                };
+                recognition.onend = function() {
+                    if (speechBtn.disabled) {
+                        speechBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                        speechBtn.disabled = false;
+                    }
+                };
+                // Dynamically update recognition.lang if language changes
+                document.getElementById('lang-dropdown').querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const lang = btn.getAttribute('data-lang');
+                        if (lang === 'ar') {
+                            recognition.lang = 'ar-EG';
+                        } else if (lang) {
+                            recognition.lang = lang;
+                        } else {
+                            recognition.lang = 'en-US';
+                        }
+                    });
+                });
+            } else {
+                speechBtn.addEventListener('click', function() {
+                    alert('Speech recognition is not supported in this browser.');
+                });
+            }
+
+            // --- Attachment Modal Logic ---
+            let currentAttachTaskIndex = null;
+            const attachmentModal = document.getElementById('attachment-modal');
+            const modalAttachmentInput = document.getElementById('modal-attachment-input');
+            const modalAttachBtn = document.getElementById('modal-attach-btn');
+            const attachmentModalClose = document.getElementById('attachment-modal-close');
+
+            function openAttachmentModal(taskIndex) {
+                currentAttachTaskIndex = taskIndex;
+                modalAttachmentInput.value = '';
+                attachmentModal.classList.add('active');
+            }
+            function closeAttachmentModal() {
+                attachmentModal.classList.remove('active');
+                currentAttachTaskIndex = null;
+            }
+            attachmentModalClose.addEventListener('click', closeAttachmentModal);
+            attachmentModal.addEventListener('mousedown', function(e) {
+                if (e.target === attachmentModal) closeAttachmentModal();
+            });
+
+            modalAttachBtn.addEventListener('click', function() {
+                if (modalAttachmentInput.files && modalAttachmentInput.files.length > 0 && currentAttachTaskIndex !== null) {
+                    const file = modalAttachmentInput.files[0];
+                    const url = URL.createObjectURL(file);
+                    // Attach to the correct task
+                    if (!todos[selectedDate][currentAttachTaskIndex].attachments) {
+                        todos[selectedDate][currentAttachTaskIndex].attachments = [];
+                    }
+                    todos[selectedDate][currentAttachTaskIndex].attachments.push({
+                        name: file.name,
+                        url: url,
+                        type: file.type
+                    });
+                    saveTodos();
+                    renderTodoList();
+                    renderCalendar();
+                    closeAttachmentModal();
+                }
+            });
+
+            // --- Animate moon/sun on dark mode toggle ---
+            const moonSunAnim = document.createElement('span');
+            moonSunAnim.id = 'moon-sun-anim';
+            moonSunAnim.style.display = 'inline-block';
+            moonSunAnim.style.transition = 'transform 0.5s cubic-bezier(.7,0,.2,1)';
+            moonSunAnim.style.fontSize = '1.3em';
+            darkModeToggle.textContent = ''; // Clear button text
+            darkModeToggle.appendChild(moonSunAnim);
+
+            function updateMoonSunIcon() {
+                if (document.body.classList.contains('dark-mode')) {
+                    moonSunAnim.innerHTML = '🌙';
+                    moonSunAnim.style.transform = 'rotate(-20deg) scale(1.2)';
+                    darkModeToggle.title = 'Switch to Light Mode';
+                } else {
+                    moonSunAnim.innerHTML = '☀️';
+                    moonSunAnim.style.transform = 'rotate(20deg) scale(1.2)';
+                    darkModeToggle.title = 'Switch to Dark Mode';
+                }
+            }
+            updateMoonSunIcon();
+
+            darkModeToggle.addEventListener('click', function() {
+                darkMode = !darkMode;
+                document.body.classList.toggle('dark-mode', darkMode);
+                localStorage.setItem('darkMode', darkMode);
+                updateMoonSunIcon();
+            });
+
+            function updateProgressCircle() {
+                const circle = document.getElementById('progress-bar-circle');
+                const text = document.getElementById('progress-circle-text');
+                if (!selectedDate || !todos[selectedDate] || todos[selectedDate].length === 0) {
+                    circle.style.strokeDashoffset = 188.4;
+                    text.textContent = "0%";
+                    return;
+                }
+                const total = todos[selectedDate].length;
+                const completed = todos[selectedDate].filter(t => t.completed).length;
+                const percent = Math.round((completed / total) * 100);
+                const offset = 188.4 - (188.4 * percent / 100);
+                circle.style.strokeDashoffset = offset;
+                text.textContent = percent + "%";
+            }
+
+            function deleteTodo(index) {
+                if (!selectedDate || !todos[selectedDate]) return;
+
+                todos[selectedDate].splice(index, 1);
+                if (!todos[selectedDate] || todos[selectedDate].length === 0) {
+                    delete todos[selectedDate];
+                }
+                saveTodos();
+                renderTodoList();
+                renderCalendar();
+                updateProgressCircle();
+            }
+        }); // <-- Add this closing brace to match the opening 'document.addEventListener('DOMContentLoaded', function() {'
+    </script>
+</body>
+</html>
